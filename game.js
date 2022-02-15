@@ -16,6 +16,7 @@ function startGame(){
 }
 
 function setupGame(){
+    
     let body = document.getElementById("body");
     let mainDiv = myCreateElement("div", "main", "centre");
     body.appendChild(mainDiv);  
@@ -51,8 +52,10 @@ function createImages(imageId, column){
     let cardBack = myCreateElement("img", `${imageId}-Back`);
     cardBack.src = "/resources/image/cardback.png"
     column.appendChild(cardBack);
-    column.appendChild(cardFront);    
-    column.addEventListener("click", cardClicked.bind(this,{cardBack, cardFront}));
+    column.appendChild(cardFront);
+    let card = new Card(imageId, cardFront, cardBack);    
+    // column.addEventListener("click", cardClicked.bind(this,{cardBack, cardFront}));
+    column.addEventListener("click", card.click.call(this));
 }
 
 function myCreateElement(elementTag, id, classname){    
@@ -76,7 +79,8 @@ function setGameArea(){
     mainArea.style.height = numberOfRows * (imgSize + 10) + "px";
 }
 
-function cardClicked(card){
+function cardClicked1(card){
+    if(card.isClicked()) return
     if(cardClick != null && cardClick.cardFront.id == card.cardFront.id) return;
     
     card.cardBack.classList.add("hide")
@@ -142,4 +146,83 @@ function resetHide(){
     elements.forEach((element)=>{
         element.classList.remove("hide")
     })
+}
+
+class Card {
+    constructor(id, cardFront, cardBack) {
+        this.id = id;
+        this.flipped = false;
+        this.front = cardFront;
+        this.back = cardBack;
+        this.isMatched = false;
+    }
+    isClicked() {
+        return this.flipped;
+    }
+    click() {
+        this.isMatch() ? this.matched() :
+        this.isClicked() ? this.hide() : this.reveal();
+        this.flipped = !this.flipped;        
+    }
+    hide() {
+        this.back.classList.remove("hide");
+        console.log("cardback hide");
+        console.log(this.back);
+    }
+    reveal() {
+        this.back.classList.add("hide");
+       // console.log(this.back);
+        console.log("reveal");
+    }
+    matched() {
+        console.log("this is a match")
+    }
+    isMatch() {
+        console.log("card matched " + (this.isClicked() && this.isMatched))
+        return this.isClicked() && this.isMatched;        
+    }
+    checkIfMatch(matchId) {
+        this.isMatched = this.id === matchId;
+        console.log("checking if id's match " + this.isMatched)
+    }
+}
+
+function setupGame2() {
+    
+    for(let i = 0; i < 3; i++) {
+        let cardFront = myCreateElement("img", `${i}-Front`);
+        let cardBack = myCreateElement("img", `${i}-back`);
+        let card = new Card(i, cardFront, cardBack);
+        if(card.id === 1) {
+            card.click(); 
+            card.checkIfMatch(1);   
+            card.click();
+            card.click();
+        }        
+         
+    }
+}
+function cardClicked(card){
+    if(card.isClicked()) return
+        
+    card.cardBack.classList.add("hide")
+
+    if(cardClick == null) cardClick = card;
+    else if(cardClick.cardFront.staticId == card.cardFront.staticId){
+        
+        setTimeout(()=>{            
+            matchedPairs++;
+            cardClick.cardFront.classList.add("hide");
+            card.cardFront.classList.add("hide");
+            cardClick = null;            
+            gameOver();            
+        },250);
+    }
+    else{
+        setTimeout(()=>{
+            cardClick.cardBack.classList.remove("hide");
+            card.cardBack.classList.remove("hide");
+            cardClick = null;
+        },500);  
+    }           
 }
