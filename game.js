@@ -1,22 +1,21 @@
 let rows = [];
-let numberOfRows = 6
-let numberOfColumns = 6
+let numberOfRows = 2
+let numberOfColumns = 2
 let imgSize = 75
-let cardClick = null;
+let firstCardClick = null;
 let tempCards = [];
 let numberOfMatchingPairs = 0;
 let cardIdArray = [];
 let matchedPairs = 0;
 
-function startGame(){
-    window.alert("starting");
+function startGame() {
+    alert("starting");
     populateCards(); 
     matchedPairs = 0;
     resetHide();   
 }
 
-function setupGame(){
-    
+function setupGame() {
     let body = document.getElementById("body");
     let mainDiv = myCreateElement("div", "main", "centre");
     body.appendChild(mainDiv);  
@@ -28,7 +27,7 @@ function setupGame(){
 }
 
 function setupRows(mainDiv){
-    for (let i = 0; i < numberOfRows; i++){
+    for (let i = 0; i < numberOfRows; i++) {
         let row = myCreateElement("div", "rowID" + i, "row");
         mainDiv.appendChild(row);
 
@@ -36,7 +35,7 @@ function setupRows(mainDiv){
     } 
 }
 
-function setupColumns(rowIndex, row){
+function setupColumns(rowIndex, row) {
     for (let i = 0; i < numberOfColumns; i++){
         let column = myCreateElement("div", "columnID" + i, "column");
         row.appendChild(column);  
@@ -44,28 +43,33 @@ function setupColumns(rowIndex, row){
     } 
 }
 
-function createImages(imageId, column){
+function createImages(imageId, column) {
     let cardId = cardIdArray.pop();
+    
     let cardFront = myCreateElement("img", `${imageId}-Front`);
-    cardFront.staticId = cardId;
-    cardFront.src = "/resources/image/card" + cardId + ".png";
+    let imgSrc1 = "resources/image/card" + cardId + ".png";
+    cardFront.src = imgSrc1;
+    
     let cardBack = myCreateElement("img", `${imageId}-Back`);
-    cardBack.src = "/resources/image/cardback.png"
+    let imgSrc2 = "resources/image/cardback.png"
+    cardBack.src = imgSrc2;
+
     column.appendChild(cardBack);
     column.appendChild(cardFront);
-    let card = new Card(imageId, cardFront, cardBack);    
-    // column.addEventListener("click", cardClicked.bind(this,{cardBack, cardFront}));
-    column.addEventListener("click", card.click.call(this));
+
+    let props = {cardId,cardFront, cardBack, imgSrc1};
+    let card = new Card(props);    
+    column.addEventListener("click", cardClicked.bind(this, card));
 }
 
-function myCreateElement(elementTag, id, classname){    
+function myCreateElement(elementTag, id, classname) {    
     let element = document.createElement(elementTag);
     if(id) element.id = id;
     if(classname) element.classList.add(classname);
     return element;
 }
 
-function setColumnProperties(){
+function setColumnProperties() {
     let columnList = document.querySelectorAll(".column")
     for(let i = 0; i < columnList.length; i++){
         columnList[i].style.width = imgSize + "px";
@@ -73,39 +77,35 @@ function setColumnProperties(){
     }
 }
 
-function setGameArea(){
+function setGameArea() {
     let mainArea = document.querySelector("#main")
     mainArea.style.width = numberOfColumns * (imgSize + 10) + "px";
     mainArea.style.height = numberOfRows * (imgSize + 10) + "px";
 }
 
-function cardClicked1(card){
-    if(card.isClicked()) return
-    if(cardClick != null && cardClick.cardFront.id == card.cardFront.id) return;
-    
-    card.cardBack.classList.add("hide")
+function cardClicked(card) {
 
-    if(cardClick == null) cardClick = card;
-    else if(cardClick.cardFront.staticId == card.cardFront.staticId){
-        
-        setTimeout(()=>{            
-            matchedPairs++;
-            cardClick.cardFront.classList.add("hide");
-            card.cardFront.classList.add("hide");
-            cardClick = null;            
+    if(firstCardClick == null) {
+        firstCardClick = card;
+        card.click();
+    }     
+    else {
+        card.click();
+        card.checkIfMatch(firstCardClick.cardId);
+        if(card.isMatch()) {
+            card.matched();
+            firstCardClick.matched();
             gameOver();            
-        },250);
-    }
-    else{
-        setTimeout(()=>{
-            cardClick.cardBack.classList.remove("hide");
-            card.cardBack.classList.remove("hide");
-            cardClick = null;
-        },500);  
-    }           
+        }
+        else {
+            card.hide();
+            firstCardClick.hide();    
+        }
+        firstCardClick = null;
+    } 
 }
 
-function populateCards(){
+function populateCards() {
     
     let numberOfCards = numberOfRows * numberOfColumns;
     numberOfMatchingPairs = numberOfCards / 2
@@ -118,11 +118,11 @@ function populateCards(){
     shuffleArray(cardIdArray);
 }
 
-function getCardIdArray(){
+function getCardIdArray() {
     return [8,7,6,5,4,3,2,1];
 }
 
-function popTempArray(){
+function popTempArray() {
     if(tempCards.length === 0){
         tempCards = getCardIdArray();
         shuffleArray(tempCards);
@@ -130,17 +130,19 @@ function popTempArray(){
     return tempCards.pop();
 }
 
-function shuffleArray(arr){
+function shuffleArray(arr) {
     arr.sort(()=> Math.random() - 0.5);
 }
 
-function gameOver(){
+function gameOver() {
+    matchedPairs ++;
     if(numberOfMatchingPairs === matchedPairs){
+        alert("Game Over"); 
         startGame();        
     } 
 }
 
-function resetHide(){
+function resetHide() {
     let elements = document.querySelectorAll(".hide")
 
     elements.forEach((element)=>{
@@ -149,80 +151,39 @@ function resetHide(){
 }
 
 class Card {
-    constructor(id, cardFront, cardBack) {
-        this.id = id;
+    constructor(props) {
+        this.id = props.imageId || 0;
+        this.cardId = props.cardId;
         this.flipped = false;
-        this.front = cardFront;
-        this.back = cardBack;
+        this.front = props.cardFront;
+        this.back = props.cardBack;
         this.isMatched = false;
     }
     isClicked() {
         return this.flipped;
     }
     click() {
-        this.isMatch() ? this.matched() :
-        this.isClicked() ? this.hide() : this.reveal();
-        this.flipped = !this.flipped;        
+        this.reveal();       
     }
     hide() {
-        this.back.classList.remove("hide");
-        console.log("cardback hide");
-        console.log(this.back);
+        setTimeout(()=> {
+            this.back.classList.remove("hide");
+            this.flipped = false;
+         },100)       
     }
     reveal() {
+        this.flipped = true;
         this.back.classList.add("hide");
-       // console.log(this.back);
-        console.log("reveal");
     }
     matched() {
-        console.log("this is a match")
+        setTimeout(()=> {
+            this.front.classList.add("hide");
+         },100)
     }
     isMatch() {
-        console.log("card matched " + (this.isClicked() && this.isMatched))
         return this.isClicked() && this.isMatched;        
     }
-    checkIfMatch(matchId) {
-        this.isMatched = this.id === matchId;
-        console.log("checking if id's match " + this.isMatched)
+    checkIfMatch(cardId) {
+        this.isMatched = this.cardId === cardId;
     }
-}
-
-function setupGame2() {
-    
-    for(let i = 0; i < 3; i++) {
-        let cardFront = myCreateElement("img", `${i}-Front`);
-        let cardBack = myCreateElement("img", `${i}-back`);
-        let card = new Card(i, cardFront, cardBack);
-        if(card.id === 1) {
-            card.click(); 
-            card.checkIfMatch(1);   
-            card.click();
-            card.click();
-        }        
-         
-    }
-}
-function cardClicked(card){
-    if(card.isClicked()) return
-        
-    card.cardBack.classList.add("hide")
-
-    if(cardClick == null) cardClick = card;
-    else if(cardClick.cardFront.staticId == card.cardFront.staticId){
-        
-        setTimeout(()=>{            
-            matchedPairs++;
-            cardClick.cardFront.classList.add("hide");
-            card.cardFront.classList.add("hide");
-            cardClick = null;            
-            gameOver();            
-        },250);
-    }
-    else{
-        setTimeout(()=>{
-            cardClick.cardBack.classList.remove("hide");
-            card.cardBack.classList.remove("hide");
-            cardClick = null;
-        },500);  
-    }           
 }
